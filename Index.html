@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>富淮理財旗艦版</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #002b36; font-family: sans-serif; }
+        .glass-ui {
+            position: absolute; top: 40px; left: 20px; right: 20px; padding: 20px;
+            background: rgba(255,255,255,0.1); backdrop-filter: blur(15px);
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); z-index: 100; color: white;
+        }
+        .btn-gold { background: linear-gradient(135deg, #d4af37, #b8860b); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .pdf-btn { position: absolute; bottom: 30px; right: 20px; background: #ff3b30; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; z-index: 100; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <div class="glass-ui">
+        <div style="color:#d4af37; font-weight:bold; font-size: 20px;">富淮團隊 | 數位旗艦工具</div>
+        <div id="status" style="margin-top:5px; opacity:0.8;">累積資產：$0</div>
+        <button class="btn-gold" onmousedown="isPress=true" onmouseup="isPress=false" ontouchstart="isPress=true" ontouchend="isPress=false">長按投入本金</button>
+    </div>
+    <div class="pdf-btn" onclick="makePDF()">生成<br>建議書</div>
+    <canvas id="cvs"></canvas>
+
+    <script>
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+        const canvas = document.getElementById('cvs');
+        const ctx = canvas.getContext('2d');
+        let coins = [], isPress = false;
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+        class Coin {
+            constructor() { this.x = Math.random() * (canvas.width - 40) + 20; this.y = -20; this.vy = 7; this.isStatic = false; }
+            update() {
+                if (this.isStatic) return;
+                this.y += this.vy;
+                if (this.y >= canvas.height - 15) { this.y = canvas.height - 15; this.isStatic = true; }
+                for (let o of coins) {
+                    if (o === this || !o.isStatic) continue;
+                    let d = Math.sqrt((this.x-o.x)**2 + (this.y-o.y)**2);
+                    if (d < 24) { this.isStatic = true; this.y = o.y - 20; break; }
+                }
+            }
+            draw() {
+                ctx.beginPath(); ctx.arc(this.x, this.y, 12, 0, Math.PI*2);
+                ctx.fillStyle = "#d4af37"; ctx.fill(); ctx.closePath();
+            }
+        }
+
+        function makePDF() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            doc.text("富淮團隊理財建議書", 20, 20);
+            doc.text(`模擬累積資產：$${(coins.length * 10).toLocaleString()} 萬`, 20, 40);
+            doc.save("fuhuai_report.pdf");
+        }
+
+        function anim() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            if(isPress && Math.random() > 0.8) { coins.push(new Coin()); document.getElementById('status').innerText = `累積資產：$${(coins.length * 10).toLocaleString()} 萬`; }
+            coins.forEach(c => { c.update(); c.draw(); });
+            requestAnimationFrame(anim);
+        }
+        anim();
+    </script>
+</body>
+</html>
+      
